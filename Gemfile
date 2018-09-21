@@ -25,6 +25,9 @@ gem 'puma', '~> 3.11'
 # Google Calendar API
 gem 'google-api-client', require: 'google/apis/calendar_v3'
 
+# Ralyxa
+gem 'ralyxa'
+
 # Reduces boot times through caching; required in config/boot.rb
 gem 'bootsnap', '>= 1.1.0', require: false
 

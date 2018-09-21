@@ -1,24 +1,11 @@
-# README
+# Calendar Assistant
 
-This README would normally document whatever steps are necessary to get the
-application up and running.
+## Utterances
 
-Things you may want to cover:
+### Describe
 
-* Ruby version
+Describes all the events you have scheduled for a specified day of the week (in the future)
 
-* System dependencies
-
-* Configuration
-
-* Database creation
-
-* Database initialization
-
-* How to run the test suite
-
-* Services (job queues, cache servers, search engines, etc.)
-
-* Deployment instructions
-
-* ...
+```
+Alexa ask calendar assistant to describe <DAY_OF_WEEK>
+```

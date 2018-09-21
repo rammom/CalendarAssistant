@@ -1,5 +1,6 @@
-class ApiController < ApplicationController
+require 'ralyxa'
 
+class ApiController < ApplicationController
     def authorize
         client = Signet::OAuth2::Client.new(client_options)
         redirect_to client.authorization_uri.to_s
@@ -19,7 +20,13 @@ class ApiController < ApplicationController
             f.write(tokens.to_json);
         end
 
-        redirect_to api_calendars_url
+        render :json => {
+            "status": "All set"
+        }
+    end
+
+    def alexa_endpoint
+        render :json => Ralyxa::Skill.handle(request)
     end
 
     def calendars
