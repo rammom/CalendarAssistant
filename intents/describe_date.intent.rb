@@ -1,6 +1,4 @@
-# Describes what's happening on a specified day of the week
-
-intent "CA_DescribeIntent" do
+intent "CA_DescribeDateIntent" do
 
     client_options = {
         client_id: Rails.application.secrets.google_client_id,
@@ -11,15 +9,10 @@ intent "CA_DescribeIntent" do
         redirect_uri: 'http://localhost:3000/api/callback'
     }
 
-    # set dates
-    day_of_week = request.slot_value("day")
-
-    today = DateTime.now.beginning_of_day
-    respond("I'm sorry, please tell me which day of the week you want me to describe") unless (Date::DAYNAMES.index(day_of_week))
-    num_days_over = Date::DAYNAMES.index(day_of_week) - today.wday
-    num_days_over += 7 if (num_days_over <= 0) 
-
-    describe_date = today + num_days_over
+    # parse date
+    date = DateTime.parse(request.slot_value("date")).beginning_of_day
+    date = date.change(:offset => "-0400")  # adjust timezone
+    date += 365 if (date.past?)
 
     # connect to google API
     client = Signet::OAuth2::Client.new(client_options)
@@ -30,15 +23,16 @@ intent "CA_DescribeIntent" do
     service = Google::Apis::CalendarV3::CalendarService.new
     service.authorization = client
 
-    startTime = describe_date.iso8601
-    endTime = (describe_date + 1).iso8601
+    # adjust to time zones
+    startTime = (date).iso8601
+    endTime = (date + 1).iso8601
 
     event_list = service.list_events(
-            'primary',
-            single_events: true,
-            order_by: 'startTime',
-            time_min: startTime,
-            time_max: endTime
+        'primary',
+        single_events: true,
+        order_by: 'startTime',
+        time_min: startTime,
+        time_max: endTime
     )
 
     events = []
@@ -54,16 +48,16 @@ intent "CA_DescribeIntent" do
         })
     end
 
-    date_speech = [
-        "#{day_of_week} ",
-        "#{Date::MONTHNAMES[describe_date.month]} ",
-        "#{describe_date.day} ",
-        "#{describe_date.year}"
+    date_speach = [
+        "#{Date::DAYNAMES[date.wday]} ",
+        "#{Date::MONTHNAMES[date.month]} ",
+        "#{date.day} ",
+        "#{date.year}"
     ].join
 
     res = [ 
         "On ",
-        date_speech,
+        date_speach,
         ", you have, "
     ]
 

@@ -65,8 +65,8 @@ class ApiController < ApplicationController
         service.authorization = client
 
         # determine query time
-        timeStart = Time.now.iso8601;
-        timeEnd = (Time.now + (60 * 60 * 24 * 2)).iso8601
+        timeStart = DateTime.parse('2018-11-21').iso8601;
+        timeEnd = (DateTime.parse('2018-11-21') + 1 + Rational(1, 24)).iso8601
 
         # get events
         @event_list = service.list_events(
@@ -83,14 +83,14 @@ class ApiController < ApplicationController
         }
 
     rescue Google::Apis::AuthorizationError
-        response = client.refresh!
-        tokens['response'] = response
+        client.code = tokens['code']
+        tokens['response'] = client.refresh!
         File.open('./google_tokens.json', 'w') do |f|
             f.write(tokens.to_json);
         end
         retry
     end
-
+    
     def new_event
         # connect to API
         client = Signet::OAuth2::Client.new(client_options)
@@ -104,7 +104,6 @@ class ApiController < ApplicationController
         time = DateTime.now
         startTime = time + Rational(1, 24)
         endTime = time + Rational(2, 24)
-        puts startTime
 
         event = Google::Apis::CalendarV3::Event.new({
             start: Google::Apis::CalendarV3::EventDateTime.new(date_time: startTime),
