@@ -17,4 +17,5 @@ Create new events
 
 ```
 Alexa ask calendar assistant to schedule <EVENT> [on/this] <DAY_OF_WEEK> from <START_TIME> to <END_TIME>
+Alexa ask calendar assistant to schedule <EVENT> [on] <DATE> from <START_TIME> to <END_TIME>
 ```
