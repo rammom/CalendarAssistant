@@ -1,53 +1,51 @@
+=begin
+
+"Alexa ask Calendar Assistant what's happening on {date}"
+
+=end
+
+require './intents/libs/Utils.rb'
+
 intent "CA_DescribeDateIntent" do
 
-    client_options = {
-        client_id: Rails.application.secrets.google_client_id,
-        client_secret: Rails.application.secrets.google_client_secret,
-        authorization_uri: 'https://accounts.google.com/o/oauth2/auth',
-        token_credential_uri: 'https://accounts.google.com/o/oauth2/token',
-        scope: Google::Apis::CalendarV3::AUTH_CALENDAR,
-        redirect_uri: 'http://localhost:3000/api/callback'
-    }
+    client_options = Utils::get_client_options()
 
-    # parse date
-    date = DateTime.parse(request.slot_value("date")).beginning_of_day
-    date = date.change(:offset => "-0400")  # adjust timezone
-    date += 365 if (date.past?)
+    # convert date string to DateTime object 
+    date = Utils::string_to_dateTime(request.slot_value("date"))
 
-    # connect to google API
-    client = Signet::OAuth2::Client.new(client_options)
-    google_tokens = File.read('./google_tokens.json')
-    tokens = JSON.parse(google_tokens)
-    client.update!(tokens['response'])
+    # setup google outh2 authentication & connect to calendar
+    service = Utils::connect_google_calendar()
+    p client
+    p client.code
 
-    service = Google::Apis::CalendarV3::CalendarService.new
-    service.authorization = client
+    # set start and end times to strings one day apart
+    start_time = (date).iso8601
+    end_time = (date + 1).iso8601
 
-    # adjust to time zones
-    startTime = (date).iso8601
-    endTime = (date + 1).iso8601
-
+    # query for calendar events
     event_list = service.list_events(
         'primary',
         single_events: true,
-        order_by: 'startTime',
-        time_min: startTime,
-        time_max: endTime
+        order_by: 'starttime',
+        time_min: start_time,
+        time_max: end_time
     )
 
+    # map events to more alexa speech friendly objects
     events = []
     event_list = event_list.items
     event_list.each do |item|
-        startTime = (item.start.date_time.hour.to_i < 12) ? " AM" : " PM"
-        startTime = (item.start.date_time.minute.to_i > 0) ? " " + item.start.date_time.minute.to_s + startTime : startTime
-        startTime = (item.start.date_time.hour.to_i % 12).to_s + startTime
+        event_start_time = (item.start.date_time.hour.to_i < 12) ? " AM" : " PM"
+        event_start_time = (item.start.date_time.minute.to_i > 0) ? " " + item.start.date_time.minute.to_s + event_start_time : event_start_time
+        event_start_time = (item.start.date_time.hour.to_i % 12).to_s + event_start_time
 
         events.push({
             :summary => item.summary,
-            :startTime => startTime
+            :start_time => event_start_time
         })
     end
 
+    # create strings that alexa says
     date_speach = [
         "#{Date::DAYNAMES[date.wday]} ",
         "#{Date::MONTHNAMES[date.month]} ",
@@ -64,28 +62,23 @@ intent "CA_DescribeDateIntent" do
     events.each do |event|
         res.push(event[:summary])
         res.push(" at ")
-        res.push(event[:startTime])
+        res.push(event[:start_time])
         res.push(". ")
     end
 
-    return {
-        "version": "1.0",
-        "response": {
-            "outputSpeech": {
-                "type": "PlainText",
-                "text": (events.length > 0) ? res.join : "You don't have any events scheduled on #{date_speach}"
-            },
-            "shouldEndSession": true
-        }
-    }
+    # return response to alexa
+    return Utils::build_alexa_response((events.length > 0) ? res.join : "You don't have any events scheduled on #{date_speach}")
 
+# if the authorization is expired use refresh token to get new access code
 rescue Google::Apis::AuthorizationError
         
-        tokens['response'] = client.refresh!
+        # tokens['response'] = client.refresh!
         
-        File.open('./google_tokens.json', 'w') do |f|
-            f.write(tokens.to_json);
-        end
+        # File.open('./google_tokens.json', 'w') do |f|
+        #     f.write(tokens.to_json);
+        # end
+
+        Utils::refresh_google_client()
 
         retry
 

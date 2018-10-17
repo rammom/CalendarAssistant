@@ -1,24 +1,24 @@
+=begin
+
+    "Alexa ask calendar assistant to schedule {event_name} on {date} from {start_time} to {end_time}"
+
+=end
+
+require './intents/libs/Utils.rb'
+
 intent "CA_NewEventDateIntent" do
 
-    client_options = {
-        client_id: Rails.application.secrets.google_client_id,
-        client_secret: Rails.application.secrets.google_client_secret,
-        authorization_uri: 'https://accounts.google.com/o/oauth2/auth',
-        token_credential_uri: 'https://accounts.google.com/o/oauth2/token',
-        scope: Google::Apis::CalendarV3::AUTH_CALENDAR,
-        redirect_uri: 'http://localhost:3000/api/callback'
-    }
+    client_options = Utils::get_client_options()
 
     # get slots
     event_name = request.slot_value('event_name')
     start_time = request.slot_value('start_time')
     end_time = request.slot_value('end_time')
 
-    # parse date
-    date = DateTime.parse(request.slot_value("date")).beginning_of_day
-    date = date.change(:offset => "-0400")  # adjust timezone
-    date += 365 if (date.past?)
+    # convert date string to DateTime object 
+    date = Utils::string_to_dateTime(request.slot_value("date"))
 
+    # set start and end time on corresponding date
     start_date = date.change({ hour: start_time[0,2].to_i, min: start_time[3,4].to_i  })
     end_date = date.change({ hour: end_time[0,2].to_i, min: end_time[3,4].to_i })
 
@@ -26,20 +26,16 @@ intent "CA_NewEventDateIntent" do
     end_date += Rational(12,24) if (start_date > end_date)
 
     # connect to google API
-    client = Signet::OAuth2::Client.new(client_options)
-    google_tokens = File.read('./google_tokens.json')
-    tokens = JSON.parse(google_tokens)
-    client.update!(tokens['response'])
+    service = Utils::connect_google_calendar()
 
-    service = Google::Apis::CalendarV3::CalendarService.new
-    service.authorization = client
-
+    # create a new google calendar event object
     event = Google::Apis::CalendarV3::Event.new({
         start: Google::Apis::CalendarV3::EventDateTime.new(date_time: start_date),
         end: Google::Apis::CalendarV3::EventDateTime.new(date_time: end_date),
         summary: event_name
     })
 
+    # add event to primary calendar
     service.insert_event('primary', event)
 
     date_speech = [
@@ -55,24 +51,19 @@ intent "CA_NewEventDateIntent" do
         date_speech
     ].join
 
-    return {
-        "version": "1.0",
-        "response": {
-            "outputSpeech": {
-                "type": "PlainText",
-                "text": res
-            },
-            "shouldEndSession": true
-        }
-    }
+    return Utils::build_alexa_response(res)
 
 rescue Google::Apis::AuthorizationError
-    client.code = tokens['code']
-    tokens['response'] = client.refresh!
+    # client.code = tokens['code']
+    # tokens['response'] = client.refresh!
     
-    File.open('./google_tokens.json', 'w') do |f|
-        f.write(tokens.to_json);
-    end
+    # File.open('./google_tokens.json', 'w') do |f|
+    #     f.write(tokens.to_json);
+    # end
+
+    p '\n\n\n\n\n\nrefreshing\n\n\n\n\n'
+
+    Utils::refresh_google_client()
 
     retry
 
