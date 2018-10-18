@@ -1,0 +1,90 @@
+<div class="container">
+
+    <%# HEADER %>
+    <div class="row" style="padding-top:1vh;">
+        <div class="col-sm-12">
+            <h1>View/Edit your events</h1>
+        </div>
+    </div>
+
+    <hr>
+
+    <%# BODY %>
+    
+    <div class="row" style="width:100%">
+        <div class="col-sm-12">
+            <h4> Day settings (24-hour clock) </h4>
+            <p>Start: <%= @day_times["start"] %>   /    End: <%= @day_times["end"] %></p>
+        </div>
+
+        <%= form_for :anything, url: 'api/set_day_times' do |f| %>
+            <div class="col-6">
+                <%= f.label "Start Time" %><br>
+                <%= f.text_field :start %>
+            </div>
+            <div class="col-6">
+                <%= f.label "End Time" %><br>
+                <%= f.text_field :end %>
+            </div>
+            <br>
+            <div class="col-12">
+                <%= f.submit "Set"%>
+            </div>
+        <% end %>
+
+    </div>
+    
+    <hr>
+
+    <div class="row">
+
+        <%# LIST EVENTS %>
+        <div class="col-sm-12 col-md-8">
+
+            <h3> Events </h3>
+
+            <table style="width:100%">
+                <tr>
+                    <th>Name</th>
+                    <th>Weekly Occurence</th>
+                    <th>Duration</th>
+                    <th></th>
+                </tr>
+                <% @events.each do |e| %>
+                    <tr>
+                        <td><%= e[:name] %></td>
+                        <td><%= e[:weekly_occurrence] %> times a week</td>
+                        <td><%= e[:duration] %> minutes</td>
+                        <td>
+                            <%= button_to "X", { :action => :delete }, :method => :delete, params: { event_id: e[:id] } %>
+                        </td>
+                    </tr>
+                <% end %>
+            </table>
+        </div>
+
+        <%# CREATE EVENTS %>
+        <div class="col-sm-12 col-md-4">
+
+            <h3> New Event </h3>
+
+            <%= form_for @event do |f| %>
+                <div>
+                    <%= f.label "Title" %><br>
+                    <%= f.text_field :name %>
+                    <br><br>
+                    <%= f.label "Weekly Occurence (how many times per week?)" %><br>
+                    <%= f.text_field :weekly_occurrence %>
+                    <br><br>
+                    <%= f.label "Duration (in minutes)" %><br>
+                    <%= f.text_field :duration %>
+                </div>
+                <br>
+                <%= f.submit "Add event"%>
+            <% end %>
+
+        </div>
+
+    </div>
+
+</div>
